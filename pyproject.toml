@@ -1,0 +1,42 @@
+[project]
+name = "backlooms"
+version = "0.0.1"
+authors = [
+    {name = "Vladimir Perekladov", email = "gleero@gmail.com"},
+]
+description = "Python Backlooms framework"
+readme = "README.md"
+requires-python = ">=3.12"
+dynamic = ["dependencies", "optional-dependencies"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements/requirements.txt"]}
+optional-dependencies.dev = { file = ["requirements/requirements-dev.txt"] }
+optional-dependencies.db = { file = ["requirements/requirements-db.txt"] }
+optional-dependencies.fastapi = { file = ["requirements/requirements-fastapi.txt"] }
+
+[tool.setuptools.packages]
+find = {namespaces = false}
+
+[build-system]
+requires = ["setuptools", "wheel", "build"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = "ignore::DeprecationWarning:jose.*:"
+
+[tool.coverage.run]
+concurrency = ["greenlet", "thread"]
+
+[tool.ruff.lint]
+select = ["ALL"]

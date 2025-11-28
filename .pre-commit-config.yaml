@@ -1,0 +1,43 @@
+repos:
+
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+    -   id: check-yaml
+    -   id: end-of-file-fixer
+    -   id: trailing-whitespace
+    -   id: requirements-txt-fixer
+
+-   repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+    -   id: black
+        types_or:
+          - python
+
+-   repo: https://github.com/PyCQA/flake8
+    rev: 7.1.1
+    hooks:
+      - id: flake8
+        types_or:
+          - python
+        args:
+          - "--max-line-length=120"
+          - "--exclude=.svn,CVS,.bzr,.hg,.git,__pycache__,.tox,.nox,.eggs,*.egg,.venv,.idea,.pytest_cache"
+
+-   repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        types_or:
+          - python
+        args:
+          - "--profile=black"
+          - "--line-length=80"
+          - "--trailing-comma"
+          - "--multi-line=3"
+          - "--force-grid-wrap=0"
+          - "--combine-as"
+          - "--lines-after-imports=2"
+          - "backlooms"
+          - "tests"
