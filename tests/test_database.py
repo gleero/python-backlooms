@@ -3,8 +3,8 @@ Author: Vladimir Perekladov
 Email: gleero@gmail.com
 """
 
-from contextlib import asynccontextmanager
 import types
+from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
 
 import pytest
@@ -197,7 +197,7 @@ async def test_session_context_rolls_back_on_exception(sa_mocks):
     db = Database("postgresql+asyncpg://u:p@h/d")
 
     with pytest.raises(RuntimeError):
-        async with db.session() as session:
+        async with db.session():
             raise RuntimeError("boom")
 
     # After exception, session should be rolled back and closed

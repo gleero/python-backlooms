@@ -4,13 +4,15 @@ Email: gleero@gmail.com
 """
 
 import inspect
-from typing import get_args, get_origin, Annotated, Literal
+from typing import Annotated, Literal, get_args, get_origin
 
 import pytest
+from typer.models import ArgumentInfo, OptionInfo
 
-from backlooms._utils.command_builder import build_run_command, build_start_command
-
-from typer.models import OptionInfo, ArgumentInfo
+from backlooms._utils.command_builder import (
+    build_run_command,
+    build_start_command,
+)
 
 
 class Recorder:

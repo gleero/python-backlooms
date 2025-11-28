@@ -47,9 +47,9 @@ import typer
 from ._utils.command_builder import build_run_command, build_start_command
 from .action import CLIAction
 from .config import BaseConfig
-from .server import ServerAdapter
-from .workers import WorkerRegistry, WorkerController
 from .di import DIContainer
+from .server import ServerAdapter
+from .workers import WorkerController, WorkerRegistry
 
 
 class Application:

@@ -32,14 +32,14 @@ import inspect
 from functools import lru_cache
 from pathlib import Path
 from types import ModuleType
-from typing import Annotated, TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
 
 import asyncpg
 from typer import Argument, Option
 
 from backlooms.action import CLIAction
 from backlooms.db import Database
-from backlooms.di import use_container, DIContainer
+from backlooms.di import DIContainer, use_container
 
 
 action = CLIAction(

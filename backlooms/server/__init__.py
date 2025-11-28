@@ -20,4 +20,5 @@ Email: gleero@gmail.com
 
 from .adapter import ServerAdapter
 
+
 __all__ = ["ServerAdapter"]

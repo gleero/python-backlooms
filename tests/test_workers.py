@@ -1,5 +1,9 @@
-from asyncio import events
-from contextlib import asynccontextmanager, AsyncExitStack
+"""
+Author: Vladimir Perekladov
+Email: gleero@gmail.com
+"""
+
+from contextlib import AsyncExitStack, asynccontextmanager
 from typing import AsyncIterator, Self
 from unittest.mock import MagicMock
 

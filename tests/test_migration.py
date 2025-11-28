@@ -8,8 +8,8 @@ from __future__ import annotations
 import copy
 import importlib
 import sys
-from contextlib import contextmanager
 import types
+from contextlib import contextmanager
 from typing import Any, Dict
 from unittest.mock import AsyncMock, MagicMock
 

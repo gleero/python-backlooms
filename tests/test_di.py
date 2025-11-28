@@ -12,6 +12,7 @@ from dependency_injector import containers
 
 from backlooms import BaseConfig
 
+
 MODULE_NAME = "backlooms.di"
 
 

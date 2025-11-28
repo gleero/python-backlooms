@@ -32,12 +32,13 @@ Author: Vladimir Perekladov
 Email: gleero@gmail.com
 """
 
-from typing import Callable, cast, Any, TypeVar
+from typing import Any, Callable, TypeVar, cast
 
-from dependency_injector.wiring import inject as di_inject
 from dependency_injector import containers, providers
+from dependency_injector.wiring import inject as di_inject
 
 from backlooms.config import BaseConfig
+
 
 wiring = containers.WiringConfiguration(modules=[])
 

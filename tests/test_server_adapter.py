@@ -6,13 +6,13 @@ Email: gleero@gmail.com
 import copy
 import importlib
 import sys
-
-import pytest
 import types
 
+import pytest
+
+from backlooms.di import DIContainer
 from backlooms.server.adapter import ServerAdapter
 from backlooms.workers.registry import WorkerRegistry
-from backlooms.di import DIContainer
 
 
 MODULE_NAME = "backlooms.server.adapters"

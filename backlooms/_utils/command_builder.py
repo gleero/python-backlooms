@@ -20,7 +20,7 @@ Email: gleero@gmail.com
 """
 
 import inspect
-from typing import Callable, Annotated, Literal
+from typing import Annotated, Callable, Literal
 
 from typer import Argument, Option
 

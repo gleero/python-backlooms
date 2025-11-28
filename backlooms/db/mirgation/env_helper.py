@@ -45,15 +45,14 @@ Email: gleero@gmail.com
 
 import importlib
 from logging.config import fileConfig
-from typing import Callable
 from types import ModuleType
+from typing import Callable
 
+from alembic import context
+from alembic.config import Config as AlembicConfig
 from sqlalchemy import create_engine
 
 from backlooms.config import BaseConfig
-from alembic import context
-from alembic.config import Config as AlembicConfig
-
 from backlooms.db import BaseModelType
 
 

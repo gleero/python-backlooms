@@ -5,7 +5,7 @@ Email: gleero@gmail.com
 
 import asyncio
 from contextlib import asynccontextmanager
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from dependency_injector import containers
@@ -13,7 +13,7 @@ from typer.testing import CliRunner
 
 from backlooms import Application, CLIAction
 from backlooms.di import DIContainer
-from backlooms.workers import WorkerRegistry, BaseWorker
+from backlooms.workers import BaseWorker, WorkerRegistry
 
 
 @pytest.fixture

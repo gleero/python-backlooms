@@ -23,15 +23,13 @@ Email: gleero@gmail.com
 
 import asyncio
 import inspect
+from argparse import ArgumentParser
 from functools import partial, wraps
+from typing import Any, Callable, Dict, Optional, Type, Union
 
 import typer
-
-from argparse import ArgumentParser
-from typing import Any, Callable, Optional, Type, Dict, Union
-
 from typer.core import TyperCommand
-from typer.models import Default, CommandFunctionType
+from typer.models import CommandFunctionType, Default
 
 
 CLIExtraType = Callable[[ArgumentParser], Any]

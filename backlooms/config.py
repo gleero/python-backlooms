@@ -29,7 +29,7 @@ Email: gleero@gmail.com
 """
 
 import os
-from typing import cast, TypeVar
+from typing import TypeVar, cast
 
 from pydantic import Field
 from pydantic_settings import BaseSettings
