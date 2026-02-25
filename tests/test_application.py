@@ -21,6 +21,9 @@ def runner():
     yield CliRunner()
 
 
+TERM_ENV = {"TERM": "dumb", "COLUMNS": "80", "NO_COLOR": "1"}
+
+
 def test_application_init_without_all(config, monkeypatch, runner):
     dict_config_mock = MagicMock()
     monkeypatch.setattr("backlooms.application.dictConfig", dict_config_mock)
@@ -50,7 +53,11 @@ def test_application_init_without_all(config, monkeypatch, runner):
     assert app.container == app._container
     assert app.config == config
 
-    ret = runner.invoke(app.typer, ["run", "--help"])
+    ret = runner.invoke(
+        app.typer,
+        ["run", "--help"],
+        env=TERM_ENV,
+    )
     assert "Worker to run [required]" in ret.stdout
     assert "CMD:{}" in ret.stdout
 
@@ -75,11 +82,19 @@ def test_application_init_server_adapter(config, runner):
     assert app._typer.registered_commands[0].name == "run"
     assert app._typer.registered_commands[1].name == "start"
 
-    ret = runner.invoke(app.typer, ["run", "--help"])
+    ret = runner.invoke(
+        app.typer,
+        ["run", "--help"],
+        env=TERM_ENV,
+    )
     assert "Worker to run [required]" in ret.stdout
     assert "CMD:{}" in ret.stdout
 
-    ret = runner.invoke(app.typer, ["start", "--help"])
+    ret = runner.invoke(
+        app.typer,
+        ["start", "--help"],
+        env=TERM_ENV,
+    )
     assert "Test Project start" in ret.stdout
     assert "--server-only" in ret.stdout
 
@@ -111,11 +126,19 @@ def test_application_init_with_workers(config, runner):
     assert app._typer.registered_commands[0].name == "run"
     assert app._typer.registered_commands[1].name == "start"
 
-    ret = runner.invoke(app.typer, ["run", "--help"])
+    ret = runner.invoke(
+        app.typer,
+        ["run", "--help"],
+        env=TERM_ENV,
+    )
     assert "- dummy: Dummy Worker" in ret.stdout
     assert "CMD:{dummy}" in ret.stdout
 
-    ret = runner.invoke(app.typer, ["start", "--help"])
+    ret = runner.invoke(
+        app.typer,
+        ["start", "--help"],
+        env=TERM_ENV,
+    )
     assert "--with-dummy" in ret.stdout
     assert "--without-dummy" in ret.stdout
 
@@ -131,7 +154,11 @@ def test_application_init_actions(config, runner):
     assert len(app._typer.registered_groups) == 2
     assert app._typer.registered_commands[0].name == "run"
 
-    ret = runner.invoke(app.typer, ["--help"])
+    ret = runner.invoke(
+        app.typer,
+        ["--help"],
+        env=TERM_ENV,
+    )
     assert "run" in ret.stdout
     assert "hello" in ret.stdout
     assert "world" in ret.stdout
