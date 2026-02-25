@@ -9,7 +9,7 @@ from .config import BaseConfig
 from .di import DIContainer, inject, use_container, use_dependency
 
 
-__version__ = "0.0.1"
+__version__ = "0.1.0"
 
 
 __all__ = [
