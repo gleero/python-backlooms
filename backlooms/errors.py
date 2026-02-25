@@ -54,7 +54,7 @@ class ValidationError(HTTPException):
     def __init__(
         self, detail: Any = None, headers: dict[str, Any] | None = None
     ) -> None:
-        super().__init__(status.HTTP_422_UNPROCESSABLE_ENTITY, detail, headers)
+        super().__init__(status.HTTP_422_UNPROCESSABLE_CONTENT, detail, headers)
 
 
 class NotAllowedError(HTTPException):

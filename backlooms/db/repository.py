@@ -10,6 +10,7 @@ Author: Vladimir Perekladov
 Email: gleero@gmail.com
 """
 
+from functools import cache
 from typing import (
     AsyncContextManager,
     Callable,
@@ -18,8 +19,11 @@ from typing import (
     Sequence,
     Type,
     TypeVar,
+    get_args,
+    get_origin,
     overload,
 )
+from uuid import UUID
 
 from fastapi_filter.contrib.sqlalchemy import Filter
 from pydantic import BaseModel
@@ -29,28 +33,82 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from sqlmodel import SQLModel, col, insert, select, update
 
-from backlooms.db.model import PKIDModel
+from backlooms.db.model import PKIDModel, PKUUIDModel
 from backlooms.errors import DuplicatedError, NotFoundError
 
 from ._utils import dict_to_sqlalchemy_filter_options
 
 
-_T = TypeVar("_T", bound=PKIDModel | SQLModel)
-_F = TypeVar("_F", bound=Optional[Filter])
+_B = TypeVar("_B", bound=SQLModel)
+_T = TypeVar("_T", bound=PKIDModel | PKUUIDModel)
+_F = TypeVar("_F", bound=Optional[Filter], default=None)
 
 
-class BaseRepository(Generic[_T, _F]):
-    model: Type[_T]
+type RecordID = int | UUID
+
+
+@cache
+def is_subclass_of_base_repository(cls: type) -> bool:
+    if f"{cls.__module__}.{cls.__name__}" == "backlooms.db.repository.BaseRepository":
+        return True
+
+    for sub in cls.__bases__:
+        if (
+            f"{sub.__module__}.{sub.__name__}"
+            == "backlooms.db.repository.BaseRepository"
+        ):
+            return True
+        return is_subclass_of_base_repository(sub)
+    return False
+
+
+class RepoMeta(type):
+    def __new__(mcls, name, bases, ns, **kwargs):
+        cls = super().__new__(mcls, name, bases, ns, **kwargs)
+        result = RepoMeta._resolve_model_type(cls)
+        setattr(cls, "model", result)
+        return cls
+
+    @staticmethod
+    def _resolve_model_type(source_cls: type) -> Type | None:
+        orig_bases = getattr(source_cls, "__orig_bases__", ())
+
+        for base in orig_bases:
+            origin = get_origin(base)
+            if origin is None:
+                continue
+
+            args = get_args(base)
+            if not args:
+                continue
+
+            if isinstance(origin, type) and is_subclass_of_base_repository(origin):
+                t_arg = args[0]
+                from typing import TypeVar as _TypeVar
+
+                if isinstance(t_arg, _TypeVar):
+                    continue
+
+                if not issubclass(t_arg, SQLModel):
+                    continue
+
+                return t_arg
+
+        return None
+
+
+class BaseRepository(Generic[_B, _F], metaclass=RepoMeta):
+    model: Type[_B]
 
     def __init__(
         self,
         session_factory: Callable[..., AsyncContextManager[AsyncSession]],
-        model: Type[_T],
     ) -> None:
         self.session_factory = session_factory
-        self.model = model
+        if self.model is None:
+            raise ValueError("Model is not set")
 
-    async def create(self, model: _T) -> _T:
+    async def create(self, model: _B) -> _B:
         """
         Create a new instance of the model
         """
@@ -63,7 +121,7 @@ class BaseRepository(Generic[_T, _F]):
                 raise DuplicatedError(detail=str(e.orig))
             return model
 
-    async def read_all(self, with_relationships: bool = False) -> Sequence[_T]:
+    async def read_all(self, with_relationships: bool = False) -> Sequence[_B]:
         """
         Return all elements from the model
         :return: list of elements
@@ -81,7 +139,7 @@ class BaseRepository(Generic[_T, _F]):
 
     async def read_by_filter(
         self, f: _F, with_relationships: bool = False
-    ) -> Sequence[_T]:
+    ) -> Sequence[_B]:
         """
         Return filtered elements
         :param f: Filter instance
@@ -114,7 +172,7 @@ class BaseRepository(Generic[_T, _F]):
         expression: ColumnExpressionArgument | None | bool,
         first: bool,
         with_relationships: bool = False,
-    ) -> _T | None: ...
+    ) -> _B | None: ...
 
     @overload
     async def read_by_where(
@@ -122,7 +180,7 @@ class BaseRepository(Generic[_T, _F]):
         expression: ColumnExpressionArgument | None | bool,
         first: None = None,
         with_relationships: bool = False,
-    ) -> Sequence[_T]: ...
+    ) -> Sequence[_B]: ...
 
     async def read_by_where(
         self,
@@ -151,33 +209,11 @@ class BaseRepository(Generic[_T, _F]):
                 query = query.limit(1)
 
             result = await session.execute(query)
-            if first is True:
+            if first:
                 return result.scalars().first()
             return result.scalars().all()
 
-    async def read_by_id(
-        self,
-        record_id: int,
-        with_relationships: bool = False,
-    ) -> _T:
-        """
-        Return element by ID
-        :param record_id: item's ID
-        :param with_relationships: Load models with relationships
-        """
-        if not issubclass(self.model, PKIDModel):
-            raise TypeError(f"{self.model.__name__} must be a subclass of PKIDModel")
-
-        item = await self.read_by_where(
-            self.model.id == record_id,
-            first=True,
-            with_relationships=with_relationships,
-        )
-        if not item:
-            raise NotFoundError(detail=f"Record not found: id={record_id}")
-        return item
-
-    async def read_by_options(self, schema: BaseModel) -> Sequence[_T]:
+    async def read_by_options(self, schema: BaseModel) -> Sequence[_B]:
         """
         Find elements by custom model schema
         :param schema: Pydantic model schema
@@ -191,43 +227,6 @@ class BaseRepository(Generic[_T, _F]):
             )
 
         return await self.read_by_where(filter_options)
-
-    async def update(
-        self,
-        record_id: int,
-        **kwargs,
-    ) -> _T:
-        """
-        Update record by ID
-        :param record_id: Record's identifier
-        :return: Changed record
-        """
-        if not issubclass(self.model, PKIDModel):
-            raise TypeError(f"{self.model.__name__} must be a subclass of PKIDModel")
-
-        async with self.session_factory() as session:
-            query = (
-                update(self.model).where(col(self.model.id) == record_id).values(kwargs)
-            )
-            await session.execute(query)
-            await session.commit()
-            return await self.read_by_id(record_id)
-
-    async def delete_by_id(self, record_id: int):
-        """
-        Delete record by ID
-        :param record_id: Record's identifier
-        """
-        if not issubclass(self.model, PKIDModel):
-            raise TypeError(f"{self.model.__name__} must be a subclass of PKIDModel")
-
-        async with self.session_factory() as session:
-            query = select(self.model).where(col(self.model.id) == record_id)
-            result = (await session.execute(query)).first()
-            if not result:
-                raise NotFoundError(detail=f"Record not found: id={record_id}")
-            await session.delete(result[0])
-            await session.commit()
 
     async def insert_many(self, items: list):
         """
@@ -258,4 +257,58 @@ class BaseRepository(Generic[_T, _F]):
             await session.commit()
 
 
-__all__ = ["BaseRepository"]
+class BaseIDRepository(BaseRepository[_T, _F], Generic[_T, _F]):
+    model: Type[_T]
+
+    async def read_by_id(
+        self,
+        record_id: RecordID,
+        with_relationships: bool = False,
+    ) -> _T:
+        """
+        Return element by ID
+        :param record_id: item's ID
+        :param with_relationships: Load models with relationships
+        """
+        item = await self.read_by_where(
+            self.model.id == record_id,
+            first=True,
+            with_relationships=with_relationships,
+        )
+        if not item:
+            raise NotFoundError(detail=f"Record not found: id={record_id}")
+        return item
+
+    async def update_by_id(
+        self,
+        record_id: RecordID,
+        **kwargs,
+    ) -> _T:
+        """
+        Update record by ID
+        :param record_id: Record's identifier
+        :return: Changed record
+        """
+        async with self.session_factory() as session:
+            query = (
+                update(self.model).where(col(self.model.id) == record_id).values(kwargs)
+            )
+            await session.execute(query)
+            await session.commit()
+            return await self.read_by_id(record_id)
+
+    async def delete_by_id(self, record_id: RecordID):
+        """
+        Delete record by ID
+        :param record_id: Record's identifier
+        """
+        async with self.session_factory() as session:
+            query = select(self.model).where(col(self.model.id) == record_id)
+            result = (await session.execute(query)).first()
+            if not result:
+                raise NotFoundError(detail=f"Record not found: id={record_id}")
+            await session.delete(result[0])
+            await session.commit()
+
+
+__all__ = ["BaseRepository", "BaseIDRepository"]

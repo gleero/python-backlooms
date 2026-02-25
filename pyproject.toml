@@ -6,14 +6,13 @@ authors = [
 ]
 description = "Python Backlooms framework"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dynamic = ["dependencies", "optional-dependencies"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
 

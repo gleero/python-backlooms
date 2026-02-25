@@ -154,4 +154,16 @@ def use_container[DI](_: type[DI]) -> DI:
     return cast(DI, REGISTERED_GLOBAL_CONTAINER)
 
 
-__all__ = ["DIContainer", "inject", "use_container"]
+def use_dependency[T](service: str, dep: type[T]) -> T:
+    container = use_container(DIContainer)
+    try:
+        requested_service = getattr(container, service)
+    except AttributeError:
+        raise RuntimeError(
+            f'Dependency "{service}" not found in container! Add to your container:'
+            f"\n\n{service} = providers.Singleton({dep.__name__}, ...)"
+        )
+    return cast(T, requested_service())
+
+
+__all__ = ["DIContainer", "inject", "use_container", "use_dependency"]

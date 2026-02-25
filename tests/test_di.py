@@ -8,7 +8,7 @@ import importlib
 import sys
 
 import pytest
-from dependency_injector import containers
+from dependency_injector import containers, providers
 
 from backlooms import BaseConfig
 
@@ -118,3 +118,19 @@ def test_container_has_config(di_pkg, config):
     container = Container(config=config)
     c = getattr(container, "config")
     assert isinstance(c(), BaseConfig)
+
+
+def test_use_dependency(di_pkg):
+    class MyService:
+        pass
+
+    class MyContainer(di_pkg.DIContainer):
+        my_service = providers.Singleton(MyService)
+
+    MyContainer()
+
+    service = di_pkg.use_dependency("my_service", MyService)
+    assert isinstance(service, MyService)
+
+    with pytest.raises(RuntimeError, match="not found in container"):
+        di_pkg.use_dependency("unknown_service", MyService)

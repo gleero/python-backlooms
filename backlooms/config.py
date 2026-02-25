@@ -149,10 +149,10 @@ class BaseConfig(BaseSettings):
     SERVER_PORT: int = 8101
 
     # Auth
-    SECRET_KEY: str
+    SECRET_KEY: str = ""
     TOKEN_ALGORITHM: str = "HS256"
-    AUTH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 30  # 30 days
-    API_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 365  # 1 year
+    AUTH_TOKEN_EXPIRE_MINUTES: int | None = 60 * 24 * 365  # 1 year
+    API_TOKEN_EXPIRE_MINUTES: int | None = None  # Never expire
 
     # CORS
     BACKEND_CORS_ORIGINS: list[str] = Field(default_factory=lambda: ["*"])

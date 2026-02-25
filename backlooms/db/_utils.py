@@ -3,13 +3,10 @@ Author: Vladimir Perekladov
 Email: gleero@gmail.com
 """
 
-from datetime import datetime
 from typing import Any, Type
 
-from sqlalchemy import ColumnElement, Integer, func
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Mapped
-from sqlmodel import SQLModel, and_, cast
+from sqlalchemy import ColumnElement
+from sqlmodel import SQLModel, and_
 
 
 SQLALCHEMY_QUERY_MAPPER = {
@@ -69,31 +66,3 @@ def dict_to_sqlalchemy_filter_options(
             sql_alchemy_filter_options.append(getattr(attr, bool_command)(None))
 
     return and_(True, *sql_alchemy_filter_options)
-
-
-def aggregated_timestamp_field(
-    session: AsyncSession, col: Mapped[datetime], interval_seconds: int
-):
-    dialect_name = session.bind.dialect.name
-
-    if dialect_name == "sqlite":
-        # In SQLite, there is no to_timestamp function, so we use strftime and datetime.
-        # func.strftime('%s', event_time) returns a string representing epoch seconds,
-        # so we cast it to Integer.
-        epoch_value = cast(
-            func.strftime("%s", col),
-            Integer,
-        )
-        grouped_epoch = cast(epoch_value / interval_seconds, Integer) * interval_seconds
-        aggregated_timestamp = func.datetime(
-            grouped_epoch,
-            "unixepoch",
-        ).label("timestamp")
-
-    else:
-        # For PostgreSQL, use the standard combination of extract, floor, and to_timestamp.
-        aggregated_timestamp = func.to_timestamp(
-            func.floor(func.extract("epoch", col) / interval_seconds) * interval_seconds
-        ).label("timestamp")
-
-    return aggregated_timestamp
