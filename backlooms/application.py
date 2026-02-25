@@ -268,8 +268,9 @@ class Application:
         partial(loop.add_signal_handler, signal.SIGTERM, lambda: stop_event.set())()
 
         try:
-            workers = self._workers.get_workers(
+            workers = self._workers.build_workers(
                 (worker_name,),
+                False,
                 container=self._container,
             )
         except ValueError as e:

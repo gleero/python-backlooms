@@ -11,9 +11,24 @@ Email: gleero@gmail.com
 
 from abc import ABCMeta, abstractmethod
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, Self
+from dataclasses import dataclass, field
+from typing import Any, AsyncIterator, Generic, Self, TypeVar
 
 from backlooms.di import DIContainer
+
+
+T_co = TypeVar("T_co", bound="BaseWorker", covariant=True)
+W = TypeVar("W", bound="BaseWorker")
+
+
+@dataclass(frozen=True)
+class WorkerSpec(Generic[T_co]):
+    cls: type[T_co]
+    args: tuple[Any, ...] = field(default_factory=tuple)
+    kwargs: dict[str, Any] = field(default_factory=dict)
+
+    def build(self, **kwargs) -> T_co:
+        return self.cls(*self.args, **self.kwargs, **kwargs)
 
 
 class BaseWorker(metaclass=ABCMeta):
@@ -29,6 +44,7 @@ class BaseWorker(metaclass=ABCMeta):
 
     NAME: str
     DESCRIPTION: str
+    SHADOW: bool = False
 
     def __init__(self, *, container: DIContainer):
         """
@@ -57,3 +73,7 @@ class BaseWorker(metaclass=ABCMeta):
             yield self  # pragma: nocover
         finally:  # pragma: nocover
             pass  # pragma: nocover
+
+    @classmethod
+    def with_args(cls: type[W], *args: Any, **kwargs: Any) -> WorkerSpec[W]:
+        return WorkerSpec(cls=cls, args=args, kwargs=kwargs)
