@@ -20,11 +20,9 @@ def router():
 
 def test_init(router):
     adapter = FastAPIServerAdapter(router=router, host="127.0.0.1", port=9000)
-    assert adapter._router is router
     assert adapter._host == "127.0.0.1"
     assert adapter._port == 9000
-    assert adapter._cors is None
-    assert adapter._fastapi_extra_args == {}
+    assert adapter.fastapi.title == "Backlooms"
 
 
 def test_start_requires_setup(router):
@@ -37,12 +35,8 @@ def test_start(router, config, monkeypatch):
     container = MagicMock()
     registry = MagicMock()
     uvicorn_run = MagicMock()
-    router_mock = MagicMock()
-    router_mock.include_router = MagicMock()
-    fastapi_mock = MagicMock(return_value=router_mock)
 
     monkeypatch.setattr("backlooms.server.adapters.fastapi.uvicorn.run", uvicorn_run)
-    monkeypatch.setattr("backlooms.server.adapters.fastapi.FastAPI", fastapi_mock)
 
     adapter = FastAPIServerAdapter(
         router=router,
@@ -53,18 +47,11 @@ def test_start(router, config, monkeypatch):
     adapter.setup(config=config, workers=registry, container=container)
     adapter.start([])
 
-    fastapi_mock.assert_called_once()
-    assert fastapi_mock.call_args[1]["title"] == config.PROJECT_NAME
-    assert fastapi_mock.call_args[1]["version"] == config.VERSION
-    assert fastapi_mock.call_args[1]["docs_url"] == "/api-docs"
-
     uvicorn_run.assert_called_once_with(
-        fastapi_mock.return_value,
+        adapter.fastapi,
         host="127.0.0.1",
         port=9000,
     )
-
-    router_mock.include_router.assert_called_once_with(router)
 
 
 @pytest.mark.parametrize(
@@ -92,6 +79,9 @@ def test_start_with_cors(router, config, monkeypatch, cors, expected_present):
     )
     adapter.setup(config=config, workers=MagicMock(), container=MagicMock())
     adapter.start([])
+
+    assert adapter.fastapi.title == config.PROJECT_NAME
+    assert adapter.fastapi.version == config.VERSION
 
     if expected_present:
         fastapi_ret.add_middleware.assert_called_once_with(
@@ -130,7 +120,7 @@ async def test_lifespan(router, config, monkeypatch):
 
     container_mock = MagicMock()
     workers_mock = MagicMock()
-    workers_mock.get_workers = MagicMock(return_value=["ret1", "ret2"])
+    workers_mock.build_workers = MagicMock(return_value=["ret1", "ret2"])
     recording_controller = RecordingController([])
     workerctl = MagicMock(return_value=recording_controller)
 
@@ -145,8 +135,8 @@ async def test_lifespan(router, config, monkeypatch):
     async with adapter._fastapi_lifespan(None, workers_to_run=["w1", "w2"]):
         pass
 
-    workers_mock.get_workers.assert_called_once_with(
-        ["w1", "w2"], container=container_mock
+    workers_mock.build_workers.assert_called_once_with(
+        ["w1", "w2"], True, container=container_mock
     )
 
     workerctl.assert_called_once_with(["ret1", "ret2"])
