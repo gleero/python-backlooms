@@ -1,0 +1,5 @@
+base58==2.1.1
+pwdlib==0.3.0
+pwdlib[argon2]==0.3.0
+python-jose==3.5.0
+random-password-generator==2.2.0

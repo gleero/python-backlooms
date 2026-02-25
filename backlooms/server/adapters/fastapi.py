@@ -29,8 +29,9 @@ import uvicorn
 from fastapi import APIRouter, FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
+from backlooms import BaseConfig, DIContainer
 from backlooms.server.adapter import ServerAdapter
-from backlooms.workers import WorkerController
+from backlooms.workers import WorkerController, WorkerRegistry
 
 
 class FastAPIServerAdapter(ServerAdapter):
@@ -47,11 +48,16 @@ class FastAPIServerAdapter(ServerAdapter):
       applied to allowed methods and headers for simplicity.
     """
 
-    _router: APIRouter
-    _fastapi_extra_args: dict[str, Any]
+    _fastapi: FastAPI
     _host: str
     _port: int
-    _cors: list[str] | None
+
+    @property
+    def fastapi(self) -> FastAPI:
+        """
+        Return the underlying FastAPI app.
+        """
+        return self._fastapi
 
     def __init__(
         self,
@@ -80,14 +86,52 @@ class FastAPIServerAdapter(ServerAdapter):
           for a later `setup(...)` and `start(...)` sequence.
         """
         super().__init__(*args, **kwargs)
-        self._router = router
         self._host = host
         self._port = port
-        self._cors = cors
 
         if fastapi_extra_args is None:
             fastapi_extra_args = {}
-        self._fastapi_extra_args = fastapi_extra_args
+
+        self._fastapi = FastAPI(
+            title="Backlooms",
+            **fastapi_extra_args,
+        )
+
+        # Add Routers and middlewares
+        self._fastapi.include_router(router)
+
+        if cors is not None:
+            self._fastapi.add_middleware(
+                CORSMiddleware,
+                allow_credentials=True,
+                allow_origins=cors,
+                allow_methods=cors,
+                allow_headers=cors,
+            )
+
+    def setup(
+        self,
+        *,
+        config: BaseConfig,
+        workers: WorkerRegistry,
+        container: DIContainer,
+    ):
+        """
+        Inject framework context required by the adapter.
+
+        Parameters:
+        - config (BaseConfig): Active application configuration instance.
+        - workers (WorkerRegistry): Registry with all available worker classes.
+        - container (DIContainer): Instantiated DI container for constructing
+          workers and resolving dependencies.
+
+        Behavior:
+        - Updates FastAPI app metadata with project name and version from config.
+        """
+        super().setup(config=config, workers=workers, container=container)
+
+        self._fastapi.title = config.PROJECT_NAME
+        self._fastapi.version = config.VERSION
 
     def start(self, workers_to_run: list[str]):
         """
@@ -110,27 +154,21 @@ class FastAPIServerAdapter(ServerAdapter):
         if self._config is None or self._workers is None or self._container is None:
             raise RuntimeError("ServerAdapter.setup(...) required")
 
-        fastapi = FastAPI(
-            title=self._config.PROJECT_NAME,
-            version=self._config.VERSION,
-            lifespan=partial(self._fastapi_lifespan, workers_to_run=workers_to_run),
-            **self._fastapi_extra_args,
+        self._fastapi.title = self._config.PROJECT_NAME
+        self._fastapi.version = self._config.VERSION
+
+        # Only for lifespan context
+        self._fastapi.include_router(
+            APIRouter(
+                lifespan=partial(
+                    self._fastapi_lifespan,
+                    workers_to_run=workers_to_run,
+                )
+            ),
         )
 
-        # Add Routers and middlewares
-        fastapi.include_router(self._router)
-
-        if self._cors is not None:
-            fastapi.add_middleware(
-                CORSMiddleware,
-                allow_credentials=True,
-                allow_origins=self._cors,
-                allow_methods=self._cors,
-                allow_headers=self._cors,
-            )
-
         uvicorn.run(
-            fastapi,
+            self._fastapi,
             host=self._host,
             port=self._port,
         )
@@ -152,8 +190,9 @@ class FastAPIServerAdapter(ServerAdapter):
             raise RuntimeError("ServerAdapter.setup(...) required")
 
         workerctl = WorkerController(
-            self._workers.get_workers(
+            self._workers.build_workers(
                 workers_to_run,
+                True,
                 container=self._container,
             )
         )

@@ -19,8 +19,10 @@ classifiers = [
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements/requirements.txt"]}
 optional-dependencies.dev = { file = ["requirements/requirements-dev.txt"] }
-optional-dependencies.db = { file = ["requirements/requirements-db.txt"] }
+optional-dependencies.security = { file = ["requirements/requirements-security.txt"] }
+optional-dependencies.db = { file = ["requirements/requirements-db.txt", "requirements/requirements-security.txt"] }
 optional-dependencies.fastapi = { file = ["requirements/requirements-fastapi.txt"] }
+optional-dependencies.full = { file = ["requirements/requirements.txt", "requirements/requirements-fastapi.txt", "requirements/requirements-db.txt", "requirements/requirements-security.txt"] }
 
 [tool.setuptools.packages]
 find = {namespaces = false}
